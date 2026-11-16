@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Placar</title>
+  <meta name="theme-color" content="#12121a" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Placar" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="icons/icon-180.png" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>🏆 Placar</h1>
+    <div class="top-actions">
+      <button id="btnUndo" class="ghost" title="Desfazer (Ctrl+Z)">↶ Desfazer</button>
+      <button id="btnMenu" class="ghost" title="Configurações">⚙️</button>
+    </div>
+  </header>
+
+  <section class="goal-bar">
+    <span>Meta: <strong id="goalLabel">100</strong> pontos</span>
+    <span id="roundLabel">Rodada 1</span>
+  </section>
+
+  <main id="players" class="players"></main>
+
+  <form id="addForm" class="add-form" autocomplete="off">
+    <input id="newName" type="text" maxlength="20" placeholder="Nome do jogador" />
+    <button type="submit">+ Jogador</button>
+  </form>
+
+  <footer class="bottom">
+    <button id="btnNextRound" class="secondary">Próxima rodada</button>
+    <button id="btnNewGame" class="danger">Novo jogo</button>
+  </footer>
+
+  <!-- Configurações -->
+  <dialog id="settings">
+    <form method="dialog" class="sheet">
+      <h2>Configurações</h2>
+      <label>Meta de pontos
+        <input id="goalInput" type="number" min="1" step="1" />
+      </label>
+      <label>Valores dos botões (separados por vírgula)
+        <input id="stepsInput" type="text" placeholder="1, 5, 10" />
+      </label>
+      <label class="row">
+        <input id="lowWinsInput" type="checkbox" />
+        Menor pontuação vence (tipo golfe)
+      </label>
+      <h3>Histórico</h3>
+      <ol id="history" class="history"></ol>
+      <div class="sheet-actions">
+        <button id="btnResetAll" type="button" class="danger">Apagar tudo</button>
+        <button value="ok">Fechar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Valor personalizado -->
+  <dialog id="custom">
+    <form method="dialog" class="sheet small">
+      <h2 id="customTitle">Pontos</h2>
+      <input id="customInput" type="number" step="1" inputmode="numeric" placeholder="Ex.: 25 ou -10" />
+      <div class="sheet-actions">
+        <button value="cancel" class="ghost">Cancelar</button>
+        <button value="ok" id="customOk">Aplicar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="winner" class="winner hidden">
+    <div class="winner-box">
+      <div class="confetti">🎉</div>
+      <h2 id="winnerName"></h2>
+      <p>venceu a partida!</p>
+      <button id="btnWinnerClose">Continuar</button>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
