@@ -1,5 +1,5 @@
 // Service worker: deixa o app funcionando offline
-const CACHE = "placar-v1";
+const CACHE = "desafio-v1";
 const FILES = [
   "./",
   "index.html",

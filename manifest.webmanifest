@@ -1,6 +1,6 @@
 {
-  "name": "Placar — App de Medida de Pontos",
-  "short_name": "Placar",
+  "name": "Desafio de Pontos",
+  "short_name": "Desafio",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

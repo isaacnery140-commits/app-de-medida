@@ -1,19 +1,27 @@
-# 🏆 Placar — App de Medida de Pontos
+# 🏆 Desafio de Pontos
 
-App para marcar pontos em jogos (cartas, tabuleiro, truco, partidas entre amigos...).
+App de desafio de pontos por dia, com prêmio no final.
 Funciona no **PC** e no **iPhone** como um web app instalável (PWA), inclusive offline.
 
-## Funcionalidades
+## Como funciona
 
-- Adicionar e remover jogadores (cada um com sua cor)
-- Botões de **+1 / +5 / +10** e **−1 / −5 / −10** (valores configuráveis)
-- Toque no placar para digitar um valor personalizado (ex.: +25, −10)
-- **Meta de pontos**: quando alguém chega lá, aparece a tela de vencedor 🎉
-- Modo **"menor pontuação vence"** (tipo golfe)
-- Ranking com 👑 para quem está liderando e barra de progresso até a meta
-- Contador de **rodadas** e **histórico** de todas as jogadas
-- **Desfazer** (botão ou `Ctrl+Z` no PC)
-- Tudo fica salvo no aparelho, mesmo fechando o app
+Duas telas de desafio:
+
+| Tela | Participantes | Duração | Meta para o prêmio |
+|---|---|---|---|
+| **Davi** | Davi | 25 dias | 110 pontos |
+| **2 Participantes** | 2 pessoas (nomes editáveis em ⚙️) | 30 dias | 132 pontos |
+
+Regras (iguais nas duas telas):
+
+- Cada dia vale **5 pontos** se fizer tudo o que foi combinado.
+- Cada **coisa errada tira 1 ponto** daquele dia (dá para anotar o motivo).
+- **Atividades extras** (que não são obrigação) dão **+1, +2 ou +5** pontos.
+- Os dias contam automaticamente a partir da data de início.
+- O app mostra quantos pontos faltam e **quanto ainda pode perder** para ganhar o prêmio.
+- Calendário com cores: verde = dia perfeito, amarelo = poucos erros, vermelho = dia ruim, ⭐ = teve extra.
+- Tudo é configurável em ⚙️: nome, dias, pontos por dia, meta, data de início, prêmio e participantes.
+- **Desfazer** (botão ou `Ctrl+Z` no PC). Os dados ficam salvos no aparelho.
 
 ## Como rodar no PC
 
