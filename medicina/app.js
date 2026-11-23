@@ -89,9 +89,13 @@
     const key = today();
     if (!state.daily[key]) {
       const n = Math.min(state.perDay, CASES.length);
-      // evita repetir os casos de ontem quando possível
-      const yesterday = state.daily[addDays(key, -1)];
-      const avoid = new Set(yesterday ? yesterday.ids : []);
+      // evita repetir casos dos últimos dias, mas deixa a escolha variar
+      const lookback = Math.max(1, Math.floor(CASES.length / n) - 2);
+      const avoid = new Set();
+      for (let d = 1; d <= lookback; d++) {
+        const prev = state.daily[addDays(key, -d)];
+        if (prev) prev.ids.forEach((id) => avoid.add(id));
+      }
       const order = shuffled(CASES.map((c) => c.id), rng(hash(key)));
       const fresh = order.filter((id) => !avoid.has(id));
       const ids = fresh.concat(order.filter((id) => avoid.has(id))).slice(0, n);
@@ -240,20 +244,20 @@
   const TITLES = { inicio: "Início", plantao: "Plantão do dia", treino: "Treino livre", desempenho: "Desempenho", conquistas: "Conquistas", ajustes: "Ajustes", caso: "Caso clínico", sorteio: "Sortear caso" };
 
   function isRevealed(plan, id) {
-    return true; // casos do plantão já vêm sorteados e visíveis
+    return !!plan.results[id] || (plan.revealed || []).includes(id);
   }
   function planItem(plan, id, i) {
     if (isRevealed(plan, id)) return caseItem(CASE_BY_ID[id], i, plan.results[id], `#/caso/plantao/${id}`);
     return `
-      <a class="case-item mystery" href="#/sorteio/plantao" style="text-decoration:none">
+      <a class="case-item mystery" href="#/caso/plantao/${id}" style="text-decoration:none">
         <div class="num">?</div>
-        <div class="info"><strong>Caso surpresa</strong><span class="muted small">Gire a roleta para revelar</span></div>
-        <div class="pts">🎰</div>
+        <div class="info"><strong>Caso surpresa</strong><span class="muted small">Toque para abrir</span></div>
+        <div class="pts">🎁</div>
       </a>`;
   }
   function planNextAction(plan) {
     const open = plan.ids.find((id) => !plan.results[id]);
-    if (open) return `<a class="btn" href="#/caso/plantao/${open}">▶ Atender próximo caso</a>`;
+    if (open) return `<a class="btn" href="#/caso/plantao/${open}">${isRevealed(plan, open) ? "▶ Continuar caso" : "🎁 Abrir próximo caso surpresa"}</a>`;
     return `<span class="badge ok">✓ Plantão concluído! Volte amanhã para novos casos.</span>`;
   }
 
@@ -335,7 +339,7 @@
     return `
       <div class="card">
         <div class="row">
-          <div><h2 style="margin:0">Casos de hoje</h2><span class="muted small">Novos casos sorteados todos os dias. Conclua todos para ganhar o bônus de plantão (+20 e mais pela sequência).</span></div>
+          <div><h2 style="margin:0">Casos de hoje</h2><span class="muted small">Casos surpresa novos todos os dias — toque para abrir. Conclua todos para ganhar o bônus de plantão (+20 e mais pela sequência).</span></div>
           <span class="spacer"></span><span class="chip primary">+${pts} pts hoje</span>
         </div>
         <div class="progress" style="margin:14px 0"><i style="width:${pct(done.length, plan.ids.length)}%"></i></div>
@@ -466,17 +470,23 @@
     if (play && play.c.id === id && play.mode === mode) return; // mantém o andamento
     const plan = todayPlan();
     if (mode === "plantao" && !plan.ids.includes(id)) { location.hash = "#/plantao"; return; }
-    if (mode === "plantao" && !isRevealed(plan, id)) { location.hash = "#/sorteio/plantao"; return; }
+    let surprise = false;
+    if (mode === "plantao" && !isRevealed(plan, id)) {
+      plan.revealed = [...(plan.revealed || []), id];
+      surprise = true;
+      save();
+    }
     const prev = mode === "plantao" ? plan.results[id] : null;
     const mult = mode === "sorteio" && state.luck && state.luck.id === id ? state.luck.mult : 1;
-    play = { c, mode, mult, step: 0, answers: [], hints: [], removed: [], answered: false, finished: false, review: !!prev, result: prev || null };
+    play = { c, mode, mult, surprise, step: 0, answers: [], hints: [], removed: [], answered: false, finished: false, review: !!prev, result: prev || null };
     if (prev) { play.answers = prev.answers; play.hints = prev.hints; play.finished = true; }
   }
 
   function viewCaso() {
     const { c, mode } = play;
     const head = `
-      <div class="card">
+      <div class="card ${play.surprise ? "reveal" : ""}">
+        ${play.surprise ? `<div class="reveal-tag">🎁 Caso surpresa revelado!</div>` : ""}
         <div class="case-head">
           <span class="badge esp">${esc(c.esp)}</span>
           <span class="badge d${c.dif}">${DIF_NAME[c.dif]}</span>
@@ -541,7 +551,7 @@
     if (mode === "plantao") {
       const plan = todayPlan();
       const n = plan.ids.find((id) => !plan.results[id]);
-      next = n ? `<a class="btn" href="#/caso/plantao/${n}">Próximo caso →</a>` : `<a class="btn" href="#/inicio">🏁 Plantão concluído!</a>`;
+      next = n ? `<a class="btn" href="#/caso/plantao/${n}">🎁 Próximo caso surpresa →</a>` : `<a class="btn" href="#/inicio">🏁 Plantão concluído!</a>`;
     } else if (mode === "sorteio") {
       next = `<a class="btn" href="#/sorteio">🎰 Girar de novo</a>`;
     } else {
@@ -565,6 +575,7 @@
     document.querySelectorAll(".option").forEach((b) => b.addEventListener("click", () => {
       if (play.answered) return;
       play.answers[play.step] = Number(b.dataset.i);
+      play.surprise = false;
       play.answered = true;
       render(false);
     }));

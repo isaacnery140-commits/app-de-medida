@@ -14,7 +14,7 @@ Funciona no **PC**, **Android** e **iPhone** como app instalável (PWA), inclusi
 | Tela | O que tem |
 |---|---|
 | **Início** | Pontos, nível, sequência, % de acertos, plantão de hoje, gráfico dos últimos 14 dias e especialidades para revisar |
-| **Plantão do dia** | Casos do dia (3, 5, 8 ou 10 — escolha em Ajustes), já sorteados e visíveis assim que você abre. Muda todo dia |
+| **Plantão do dia** | Casos do dia (3, 5, 8 ou 10 — escolha em Ajustes), mostrados como "Caso surpresa": toque e o caso abre direto. Mudam todo dia, sem repetir os dos últimos dias |
 | **🎰 Sortear** | Roleta de especialidades: sorteia qualquer caso com um bônus de sorte ×1, ×2 ou ×3 |
 | **Treino livre** | Qualquer caso, filtrando por especialidade, ou caso aleatório |
 | **Desempenho** | Acertos por especialidade |

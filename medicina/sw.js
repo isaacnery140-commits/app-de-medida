@@ -1,5 +1,5 @@
 // Service worker: deixa o app funcionando offline
-const CACHE = "medicina-v3";
+const CACHE = "medicina-v4";
 const FILES = [
   "./",
   "index.html",
@@ -26,8 +26,10 @@ self.addEventListener("activate", (e) => {
 });
 
 self.addEventListener("fetch", (e) => {
+  if (e.request.method !== "GET") return;
   e.respondWith(
-    fetch(e.request)
+    // sempre confere se há versão nova no servidor (o cache só é usado sem internet)
+    fetch(e.request.url, { cache: "no-cache" })
       .then((res) => {
         const copy = res.clone();
         caches.open(CACHE).then((c) => c.put(e.request, copy));
