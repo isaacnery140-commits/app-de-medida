@@ -1,11 +1,10 @@
 // Service worker: deixa o app funcionando offline
-const CACHE = "plantao-v1";
+const CACHE = "desafio-v1";
 const FILES = [
   "./",
   "index.html",
   "style.css",
   "app.js",
-  "cases.js",
   "manifest.webmanifest",
   "icons/icon.svg",
   "icons/icon-180.png",

@@ -1,12 +1,11 @@
 {
-  "name": "Plantão Quiz — Casos Clínicos",
-  "short_name": "Plantão",
-  "description": "Resolva casos clínicos todos os dias e ganhe pontos.",
+  "name": "Desafio de Pontos",
+  "short_name": "Desafio",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#f4f6f8",
-  "theme_color": "#0f766e",
+  "background_color": "#12121a",
+  "theme_color": "#12121a",
   "lang": "pt-BR",
   "icons": [
     { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },

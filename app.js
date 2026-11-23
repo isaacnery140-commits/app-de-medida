@@ -1,589 +1,323 @@
-// Plantão Quiz — jogo de casos clínicos com pontos
-(() => {
-  "use strict";
+// Desafio de Pontos — PC e iPhone
+// Regra: cada dia vale X pontos (padrão 5). Cada coisa errada tira 1 ponto.
+// Atividades extras (que não são obrigação) somam pontos a mais.
+// Só contam os dias que já chegaram (a partir da data de início).
 
-  const STORE_KEY = "plantao-quiz-v1";
-  const DIF_NAME = { 1: "Fácil", 2: "Médio", 3: "Difícil" };
-  const DIF_PTS = { 1: 10, 2: 15, 3: 20 };
-  const LEVELS = ["Estudante", "Interno", "Residente R1", "Residente R2", "Residente R3",
-    "Especialista", "Preceptor", "Chefe de Plantão", "Lenda da Medicina"];
-  const SPECIALTIES = [...new Set(CASES.map((c) => c.esp))].sort((a, b) => a.localeCompare(b));
-  const CASE_BY_ID = Object.fromEntries(CASES.map((c) => [c.id, c]));
+const STORAGE_KEY = "desafio-pontos-v1";
+const COLORS = ["#7c5cff", "#ff8a3d", "#2ecc71", "#3db8ff", "#ff5c9a", "#f5c518"];
 
-  const BADGES = [
-    { id: "primeiro", ico: "🩺", nome: "Primeiro atendimento", desc: "Concluir o primeiro caso" },
-    { id: "perfeito", ico: "💯", nome: "Caso perfeito", desc: "Acertar tudo num caso sem usar dica" },
-    { id: "plantao", ico: "🌙", nome: "Plantão completo", desc: "Concluir todos os casos do dia" },
-    { id: "streak3", ico: "🔥", nome: "Ritmo de residente", desc: "3 dias seguidos de plantão completo" },
-    { id: "streak7", ico: "⚡", nome: "Semana de ferro", desc: "7 dias seguidos de plantão completo" },
-    { id: "pts500", ico: "⭐", nome: "500 pontos", desc: "Somar 500 pontos" },
-    { id: "pts2000", ico: "🌟", nome: "2.000 pontos", desc: "Somar 2.000 pontos" },
-    { id: "resp50", ico: "📚", nome: "50 respostas", desc: "Responder 50 perguntas" },
-    { id: "dificil", ico: "🧠", nome: "Caso difícil", desc: "Acertar tudo num caso difícil" },
-    { id: "todas", ico: "🌍", nome: "Clínico geral", desc: "Acertar ao menos uma pergunta em cada especialidade" },
-  ];
+const todayISO = () => toISO(new Date());
+function toISO(d) {
+  const z = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}`;
+}
+function parseISO(s) {
+  const [y, m, d] = s.split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+function addDays(iso, n) {
+  const d = parseISO(iso);
+  d.setDate(d.getDate() + n);
+  return d;
+}
+const uid = () => Math.random().toString(36).slice(2, 9);
 
-  // ---------- Estado ----------
-  const defaultState = () => ({
-    name: "",
-    perDay: 5,
-    points: 0,
-    answered: 0,
-    correct: 0,
-    spec: {},          // { esp: { c, t } }
-    days: {},          // { "2026-11-23": { points, correct, total } }
-    daily: {},         // { "2026-11-23": { ids: [], results: { id: result } } }
-    streak: 0,
-    bestStreak: 0,
-    lastFullDay: null,
-    badges: {},        // { id: dateISO }
-  });
+function person(name, i) {
+  return { id: uid(), name, color: COLORS[i % COLORS.length], days: {} };
+}
 
-  let state = load();
-  function load() {
-    try {
-      const raw = localStorage.getItem(STORE_KEY);
-      if (raw) return { ...defaultState(), ...JSON.parse(raw) };
-    } catch (e) { /* ignora */ }
-    return defaultState();
-  }
-  function save() {
-    try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* ignora */ }
-  }
+function defaultState() {
+  const start = todayISO();
+  return {
+    active: "c1",
+    challenges: [
+      { id: "c1", title: "Davi", days: 25, base: 5, goal: 110, start, prize: "", people: [person("Davi", 0)] },
+      {
+        id: "c2", title: "2 Participantes", days: 30, base: 5, goal: 132, start, prize: "",
+        people: [person("Participante 1", 1), person("Participante 2", 3)],
+      },
+    ],
+    ui: {}, // dia selecionado por participante
+    undo: [],
+  };
+}
 
-  // ---------- Datas ----------
-  function dateKey(d = new Date()) {
-    const z = (n) => String(n).padStart(2, "0");
-    return `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}`;
-  }
-  function addDays(key, n) {
-    const [y, m, d] = key.split("-").map(Number);
-    return dateKey(new Date(y, m - 1, d + n));
-  }
-  const today = () => dateKey();
-
-  // ---------- Sorteio diário ----------
-  function hash(str) {
-    let h = 2166136261;
-    for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
-    return h >>> 0;
-  }
-  function rng(seed) {
-    return () => {
-      seed |= 0; seed = (seed + 0x6d2b79f5) | 0;
-      let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
-      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-    };
-  }
-  function shuffled(arr, rand) {
-    const a = arr.slice();
-    for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
-    return a;
-  }
-  function todayPlan() {
-    const key = today();
-    if (!state.daily[key]) {
-      const n = Math.min(state.perDay, CASES.length);
-      // evita repetir os casos de ontem quando possível
-      const yesterday = state.daily[addDays(key, -1)];
-      const avoid = new Set(yesterday ? yesterday.ids : []);
-      const order = shuffled(CASES.map((c) => c.id), rng(hash(key)));
-      const fresh = order.filter((id) => !avoid.has(id));
-      const ids = fresh.concat(order.filter((id) => avoid.has(id))).slice(0, n);
-      state.daily[key] = { ids, results: {} };
-      // limpa planos com mais de 60 dias
-      const limit = addDays(key, -60);
-      for (const k of Object.keys(state.daily)) if (k < limit) delete state.daily[k];
-      save();
-    }
-    return state.daily[key];
-  }
-
-  // ---------- Nível ----------
-  function levelInfo(points) {
-    let lvl = 0, need = 100, base = 0;
-    while (points >= base + need) { base += need; lvl++; need = 100 + lvl * 75; }
-    return {
-      index: lvl,
-      name: LEVELS[Math.min(lvl, LEVELS.length - 1)] + (lvl >= LEVELS.length ? ` ${lvl - LEVELS.length + 2}` : ""),
-      into: points - base,
-      need,
-      pct: Math.round(((points - base) / need) * 100),
-    };
-  }
-
-  // ---------- Utilidades ----------
-  const $ = (sel, el = document) => el.querySelector(sel);
-  const esc = (s) => String(s).replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
-  const fmt = (n) => Number(n).toLocaleString("pt-BR");
-  const pct = (c, t) => (t ? Math.round((c / t) * 100) : 0);
-
-  function toast(msg) {
-    const el = document.createElement("div");
-    el.className = "toast";
-    el.textContent = msg;
-    $("#toasts").appendChild(el);
-    setTimeout(() => el.remove(), 3200);
-  }
-  function confirmBox(text) {
-    return new Promise((resolve) => {
-      const dlg = $("#confirm");
-      $("#confirmText").textContent = text;
-      dlg.returnValue = "";
-      dlg.addEventListener("close", () => resolve(dlg.returnValue === "ok"), { once: true });
-      dlg.showModal();
-    });
-  }
-
-  function maxPoints(c) {
-    return c.perguntas.length * DIF_PTS[c.dif] + 5 * c.dif;
-  }
-
-  // ---------- Pontuação ----------
-  function award(c, mode, answers, hints) {
-    const per = DIF_PTS[c.dif];
-    let pts = 0, correct = 0;
-    c.perguntas.forEach((q, i) => {
-      const ok = answers[i] === q.c;
-      if (ok) { correct++; pts += hints[i] ? Math.round(per / 2) : per; }
-    });
-    const perfect = correct === c.perguntas.length && !hints.some(Boolean);
-    if (perfect) pts += 5 * c.dif;
-    if (mode === "treino") pts = Math.round(pts / 2);
-    return { pts, correct, total: c.perguntas.length, perfect };
-  }
-
-  function unlock(id) {
-    if (state.badges[id]) return;
-    state.badges[id] = today();
-    const b = BADGES.find((x) => x.id === id);
-    toast(`${b.ico} Conquista: ${b.nome}`);
-  }
-
-  function commitResult(c, mode, answers, hints) {
-    const r = award(c, mode, answers, hints);
-    const key = today();
-    const beforeLvl = levelInfo(state.points).index;
-    let bonus = 0;
-
-    state.answered += r.total;
-    state.correct += r.correct;
-    const s = (state.spec[c.esp] ||= { c: 0, t: 0 });
-    s.c += r.correct; s.t += r.total;
-
-    if (mode === "plantao") {
-      const plan = todayPlan();
-      plan.results[c.id] = { answers, hints, pts: r.pts, correct: r.correct, total: r.total };
-      const allDone = plan.ids.every((id) => plan.results[id]);
-      if (allDone) {
-        if (state.lastFullDay === addDays(key, -1)) state.streak += 1;
-        else if (state.lastFullDay !== key) state.streak = 1;
-        state.lastFullDay = key;
-        state.bestStreak = Math.max(state.bestStreak, state.streak);
-        bonus = 20 + Math.min(state.streak, 7) * 2;
-        unlock("plantao");
-        if (state.streak >= 3) unlock("streak3");
-        if (state.streak >= 7) unlock("streak7");
-      }
-    }
-
-    const total = r.pts + bonus;
-    state.points += total;
-    const d = (state.days[key] ||= { points: 0, correct: 0, total: 0 });
-    d.points += total; d.correct += r.correct; d.total += r.total;
-
-    unlock("primeiro");
-    if (r.perfect) unlock("perfeito");
-    if (r.correct === r.total && c.dif === 3) unlock("dificil");
-    if (state.points >= 500) unlock("pts500");
-    if (state.points >= 2000) unlock("pts2000");
-    if (state.answered >= 50) unlock("resp50");
-    if (SPECIALTIES.every((e) => state.spec[e] && state.spec[e].c > 0)) unlock("todas");
-
-    const after = levelInfo(state.points);
-    if (after.index > beforeLvl) toast(`🎉 Subiu de nível: ${after.name}!`);
-    save();
-    return { ...r, bonus };
-  }
-
-  // ---------- Topo ----------
-  function renderChips() {
-    const lv = levelInfo(state.points);
-    const plan = todayPlan();
-    const done = plan.ids.filter((id) => plan.results[id]).length;
-    $("#chips").innerHTML = `
-      <span class="chip hide-sm">🩺 ${done}/${plan.ids.length} hoje</span>
-      <span class="chip">🔥 ${currentStreak()}</span>
-      <span class="chip primary">⭐ ${fmt(state.points)} pts</span>
-      <span class="chip hide-sm">🎓 ${esc(lv.name)}</span>`;
-  }
-  function currentStreak() {
-    const k = today();
-    return state.lastFullDay === k || state.lastFullDay === addDays(k, -1) ? state.streak : 0;
-  }
-
-  // ---------- Telas ----------
-  const TITLES = { inicio: "Início", plantao: "Plantão do dia", treino: "Treino livre", desempenho: "Desempenho", conquistas: "Conquistas", ajustes: "Ajustes", caso: "Caso clínico" };
-
-  function caseItem(c, i, result, href) {
-    return `
-      <a class="case-item ${result ? "done" : ""}" href="${href}" style="text-decoration:none">
-        <div class="num">${result ? "✓" : i + 1}</div>
-        <div class="info">
-          <strong>${esc(c.titulo)}</strong>
-          <span class="muted small">${esc(c.paciente)}</span>
-          <div class="meta">
-            <span class="badge esp">${esc(c.esp)}</span>
-            <span class="badge d${c.dif}">${DIF_NAME[c.dif]}</span>
-            <span class="badge">${c.perguntas.length} perguntas</span>
-          </div>
-        </div>
-        <div class="pts">${result ? `+${result.pts} pts` : `até ${maxPoints(c)} pts`}</div>
-      </a>`;
-  }
-
-  function viewInicio() {
-    const lv = levelInfo(state.points);
-    const plan = todayPlan();
-    const done = plan.ids.filter((id) => plan.results[id]).length;
-    const todayPts = (state.days[today()] || {}).points || 0;
-    const next = plan.ids.find((id) => !plan.results[id]);
-    const hello = state.name ? `Olá, ${esc(state.name)}!` : "Olá!";
-
-    const days = [];
-    for (let i = 13; i >= 0; i--) {
-      const k = addDays(today(), -i);
-      days.push({ k, p: (state.days[k] || {}).points || 0 });
-    }
-    const maxP = Math.max(50, ...days.map((d) => d.p));
-
-    const weak = SPECIALTIES
-      .map((e) => ({ e, s: state.spec[e] }))
-      .filter((x) => x.s && x.s.t >= 2)
-      .sort((a, b) => a.s.c / a.s.t - b.s.c / b.s.t)
-      .slice(0, 3);
-
-    return `
-      <div class="grid kpis">
-        <div class="card kpi"><div class="label">Pontos totais <span>⭐</span></div><div class="value">${fmt(state.points)}</div><div class="sub">+${fmt(todayPts)} hoje</div></div>
-        <div class="card kpi"><div class="label">Nível <span>🎓</span></div><div class="value" style="font-size:19px;margin:8px 0 6px">${esc(lv.name)}</div><div class="progress"><i style="width:${lv.pct}%"></i></div><div class="sub">${lv.into}/${lv.need} para o próximo</div></div>
-        <div class="card kpi"><div class="label">Sequência <span>🔥</span></div><div class="value">${currentStreak()} ${currentStreak() === 1 ? "dia" : "dias"}</div><div class="sub">Recorde: ${state.bestStreak}</div></div>
-        <div class="card kpi"><div class="label">Acertos <span>🎯</span></div><div class="value">${pct(state.correct, state.answered)}%</div><div class="sub">${fmt(state.correct)} de ${fmt(state.answered)} perguntas</div></div>
-      </div>
-
-      <div class="grid two" style="margin-top:16px">
-        <div class="card">
-          <div class="row"><h2 style="margin:0">${hello} Seu plantão de hoje</h2><span class="spacer"></span><span class="badge ${done === plan.ids.length ? "ok" : ""}">${done}/${plan.ids.length}</span></div>
-          <div class="progress" style="margin:12px 0 16px"><i style="width:${pct(done, plan.ids.length)}%"></i></div>
-          <div class="case-list">${plan.ids.slice(0, 3).map((id, i) => caseItem(CASE_BY_ID[id], i, plan.results[id], `#/caso/plantao/${id}`)).join("")}</div>
-          <div class="row" style="margin-top:14px">
-            ${next ? `<a class="btn" href="#/caso/plantao/${next}">▶ Atender próximo caso</a>` : `<span class="badge ok">✓ Plantão concluído! Volte amanhã para novos casos.</span>`}
-            <a class="btn ghost" href="#/plantao">Ver todos</a>
-          </div>
-        </div>
-        <div class="card">
-          <h2>Pontos nos últimos 14 dias</h2>
-          <div class="bars">${days.map((d, i) => `<div class="bar ${i === 13 ? "today" : ""}" title="${d.k}: ${d.p} pts"><i style="height:${(d.p / maxP) * 100}%"></i><small>${d.k.slice(8)}</small></div>`).join("")}</div>
-          <h2 style="margin-top:18px">Para revisar</h2>
-          ${weak.length ? weak.map((w) => `<div class="row small" style="margin:6px 0"><span style="width:130px">${esc(w.e)}</span><div class="progress spacer"><i style="width:${pct(w.s.c, w.s.t)}%"></i></div><b>${pct(w.s.c, w.s.t)}%</b></div>`).join("") : `<p class="muted small">Responda alguns casos para ver onde focar.</p>`}
-          <a class="btn soft block" style="margin-top:12px" href="#/treino">🎯 Treinar mais</a>
-        </div>
-      </div>`;
-  }
-
-  function viewPlantao() {
-    const plan = todayPlan();
-    const done = plan.ids.filter((id) => plan.results[id]);
-    const pts = done.reduce((s, id) => s + plan.results[id].pts, 0);
-    return `
-      <div class="card">
-        <div class="row">
-          <div><h2 style="margin:0">Casos de hoje</h2><span class="muted small">Novos casos todos os dias. Conclua todos para ganhar o bônus de plantão (+20 e mais pela sequência).</span></div>
-          <span class="spacer"></span><span class="chip primary">+${pts} pts hoje</span>
-        </div>
-        <div class="progress" style="margin:14px 0"><i style="width:${pct(done.length, plan.ids.length)}%"></i></div>
-        <div class="case-list">${plan.ids.map((id, i) => caseItem(CASE_BY_ID[id], i, plan.results[id], `#/caso/plantao/${id}`)).join("")}</div>
-      </div>
-      <p class="muted small" style="margin-top:14px">Pontuação: Fácil 10, Médio 15, Difícil 20 por acerto · dica vale metade · caso perfeito dá bônus · treino livre vale metade dos pontos.</p>`;
-  }
-
-  let trainFilter = "Todas";
-  function viewTreino() {
-    const list = CASES.filter((c) => trainFilter === "Todas" || c.esp === trainFilter);
-    return `
-      <div class="card">
-        <div class="row" style="margin-bottom:12px"><h2 style="margin:0">Escolha uma especialidade</h2><span class="spacer"></span>
-          <button class="btn" id="btnRandom">🎲 Caso aleatório</button></div>
-        <div class="filters">${["Todas", ...SPECIALTIES].map((e) => `<button class="filter ${e === trainFilter ? "active" : ""}" data-esp="${esc(e)}">${esc(e)}</button>`).join("")}</div>
-        <div class="case-list">${list.map((c, i) => caseItem(c, i, null, `#/caso/treino/${c.id}`)).join("")}</div>
-      </div>`;
-  }
-  function bindTreino() {
-    document.querySelectorAll(".filter").forEach((b) => b.addEventListener("click", () => { trainFilter = b.dataset.esp; render(); }));
-    $("#btnRandom").addEventListener("click", () => {
-      const list = CASES.filter((c) => trainFilter === "Todas" || c.esp === trainFilter);
-      const c = list[Math.floor(Math.random() * list.length)];
-      location.hash = `#/caso/treino/${c.id}`;
-    });
-  }
-
-  function viewDesempenho() {
-    const rows = SPECIALTIES.map((e) => {
-      const s = state.spec[e] || { c: 0, t: 0 };
-      const total = CASES.filter((c) => c.esp === e).length;
-      return `<tr><td><b>${esc(e)}</b><br><span class="muted small">${total} casos no banco</span></td><td>${s.c}/${s.t}</td><td style="width:40%"><div class="row"><div class="progress spacer"><i style="width:${pct(s.c, s.t)}%"></i></div><b>${s.t ? pct(s.c, s.t) + "%" : "—"}</b></div></td></tr>`;
-    }).join("");
-    const lv = levelInfo(state.points);
-    return `
-      <div class="grid kpis">
-        <div class="card kpi"><div class="label">Perguntas respondidas</div><div class="value">${fmt(state.answered)}</div></div>
-        <div class="card kpi"><div class="label">Acertos</div><div class="value">${pct(state.correct, state.answered)}%</div></div>
-        <div class="card kpi"><div class="label">Maior sequência</div><div class="value">${state.bestStreak} 🔥</div></div>
-        <div class="card kpi"><div class="label">Nível</div><div class="value" style="font-size:19px">${esc(lv.name)}</div></div>
-      </div>
-      <div class="card" style="margin-top:16px">
-        <h2>Acertos por especialidade</h2>
-        <table><thead><tr><th>Especialidade</th><th>Acertos</th><th>Aproveitamento</th></tr></thead><tbody>${rows}</tbody></table>
-      </div>
-      <a class="btn ghost" style="margin-top:16px" href="#/conquistas">🏅 Ver conquistas (${Object.keys(state.badges).length}/${BADGES.length})</a>`;
-  }
-
-  function viewConquistas() {
-    return `
-      <div class="card">
-        <h2>Conquistas — ${Object.keys(state.badges).length} de ${BADGES.length}</h2>
-        <div class="badges">${BADGES.map((b) => `
-          <div class="ach ${state.badges[b.id] ? "" : "locked"}">
-            <div class="ico">${b.ico}</div>
-            <div><b>${esc(b.nome)}</b><br><span class="muted small">${esc(b.desc)}</span>${state.badges[b.id] ? `<br><span class="badge ok">${state.badges[b.id].split("-").reverse().join("/")}</span>` : ""}</div>
-          </div>`).join("")}</div>
-      </div>`;
-  }
-
-  function viewAjustes() {
-    return `
-      <div class="card" style="max-width:520px">
-        <h2>Seu perfil</h2>
-        <label class="field">Seu nome
-          <input id="cfgName" type="text" maxlength="30" value="${esc(state.name)}" placeholder="Ex.: Dra. Ana" />
-        </label>
-        <label class="field">Casos por dia no plantão
-          <select id="cfgPerDay">${[3, 5, 8, 10].map((n) => `<option ${n === state.perDay ? "selected" : ""}>${n}</option>`).join("")}</select>
-        </label>
-        <p class="muted small">A mudança vale a partir do próximo dia (o plantão de hoje continua igual).</p>
-        <div class="row"><button class="btn" id="btnSave">Salvar</button></div>
-      </div>
-      <div class="card" style="max-width:520px;margin-top:16px">
-        <h2>Dados</h2>
-        <p class="muted small">Seu progresso fica salvo neste aparelho e navegador.</p>
-        <div class="row">
-          <button class="btn ghost" id="btnExport">⬇ Exportar backup</button>
-          <label class="btn ghost" style="cursor:pointer">⬆ Importar backup<input id="fileImport" type="file" accept="application/json" hidden /></label>
-          <button class="btn danger" id="btnReset">Zerar progresso</button>
-        </div>
-      </div>
-      <p class="muted small" style="margin-top:16px">${CASES.length} casos em ${SPECIALTIES.length} especialidades. Conteúdo educativo, não substitui avaliação médica.</p>`;
-  }
-  function bindAjustes() {
-    $("#btnSave").addEventListener("click", () => {
-      state.name = $("#cfgName").value.trim();
-      state.perDay = Number($("#cfgPerDay").value);
-      save(); toast("✔ Ajustes salvos"); render();
-    });
-    $("#btnExport").addEventListener("click", () => {
-      const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = `plantao-quiz-backup-${today()}.json`;
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-    });
-    $("#fileImport").addEventListener("change", async (e) => {
-      const f = e.target.files[0];
-      if (!f) return;
-      try {
-        const data = JSON.parse(await f.text());
-        if (typeof data.points !== "number") throw new Error();
-        if (!(await confirmBox("Substituir o progresso atual pelo backup?"))) return;
-        state = { ...defaultState(), ...data }; save(); toast("✔ Backup importado"); render();
-      } catch { toast("Arquivo de backup inválido"); }
-    });
-    $("#btnReset").addEventListener("click", async () => {
-      if (!(await confirmBox("Apagar todos os pontos, conquistas e histórico? Não dá para desfazer."))) return;
-      state = defaultState(); save(); toast("Progresso zerado"); location.hash = "#/inicio";
-    });
-  }
-
-  // ---------- Jogador do caso ----------
-  let play = null; // { c, mode, step, answers, hints, removed, answered, finished, review }
-
-  function startCase(mode, id) {
-    const c = CASE_BY_ID[id];
-    if (!c) { location.hash = "#/inicio"; return; }
-    if (play && play.c.id === id && play.mode === mode) return; // mantém o andamento
-    const plan = todayPlan();
-    if (mode === "plantao" && !plan.ids.includes(id)) { location.hash = "#/plantao"; return; }
-    const prev = mode === "plantao" ? plan.results[id] : null;
-    play = { c, mode, step: 0, answers: [], hints: [], removed: [], answered: false, finished: false, review: !!prev, result: prev || null };
-    if (prev) { play.answers = prev.answers; play.hints = prev.hints; play.finished = true; }
-  }
-
-  function viewCaso() {
-    const { c, mode } = play;
-    const head = `
-      <div class="card">
-        <div class="case-head">
-          <span class="badge esp">${esc(c.esp)}</span>
-          <span class="badge d${c.dif}">${DIF_NAME[c.dif]}</span>
-          <span class="badge">${mode === "plantao" ? "Plantão do dia" : "Treino (metade dos pontos)"}</span>
-        </div>
-        <h2 style="margin:0">${esc(c.titulo)}</h2>
-        <div class="patient">${esc(c.paciente)}</div>
-        <p style="margin:0">${esc(c.historia)}</p>
-        <div class="vitals">${Object.entries(c.sinais).map(([k, v]) => `<div class="vital"><small>${k === "SatO2" ? "SatO₂" : k}</small><b>${esc(v)}</b></div>`).join("")}</div>
-        <h3>Exame físico e exames</h3>
-        <ul class="exams">${c.exames.map((e) => `<li>${esc(e)}</li>`).join("")}</ul>
-      </div>`;
-
-    if (play.finished) return head + viewResult();
-
-    const q = c.perguntas[play.step];
-    const chosen = play.answers[play.step];
-    const removed = play.removed[play.step] || [];
-    const per = DIF_PTS[c.dif];
-    const worth = play.hints[play.step] ? Math.round(per / 2) : per;
-    const opts = q.op.map((o, i) => {
-      let cls = "option";
-      if (play.answered) { if (i === q.c) cls += " correct"; else if (i === chosen) cls += " wrong"; }
-      else if (removed.includes(i)) cls += " hidden-op";
-      const dis = play.answered || removed.includes(i);
-      return `<button class="${cls}" data-i="${i}" ${dis ? "disabled" : ""}><span class="letter">${"ABCD"[i]}</span><span>${esc(o)}</span></button>`;
-    }).join("");
-
-    let fb = "";
-    if (play.answered) {
-      const ok = chosen === q.c;
-      fb = `<div class="feedback ${ok ? "ok" : "no"}"><strong>${ok ? `✅ Correto! +${mode === "treino" ? Math.round(worth / 2) : worth} pts` : "❌ Não foi dessa vez"}</strong>${esc(q.exp)}</div>
-        <div class="row" style="margin-top:14px"><span class="spacer"></span><button class="btn" id="btnNext">${play.step + 1 < c.perguntas.length ? "Próxima pergunta →" : "Ver resultado"}</button></div>`;
-    }
-
-    return head + `
-      <div class="card" style="margin-top:16px">
-        <div class="qhead">
-          <span class="badge">Pergunta ${play.step + 1} de ${c.perguntas.length}</span>
-          ${play.answered ? "" : `<button class="btn soft" id="btnHint" ${play.hints[play.step] ? "disabled" : ""}>💡 Dica <span class="small">(½ pts)</span></button>`}
-        </div>
-        <div class="progress" style="margin-bottom:14px"><i style="width:${pct(play.step, c.perguntas.length)}%"></i></div>
-        <p class="question">${esc(q.p)}</p>
-        <div class="options">${opts}</div>
-        ${fb}
-      </div>`;
-  }
-
-  function viewResult() {
-    const { c, mode } = play;
-    const r = play.result;
-    const review = c.perguntas.map((q, i) => {
-      const ok = play.answers[i] === q.c;
-      return `<div style="padding:12px 0;border-bottom:1px solid var(--line)">
-        <b>${ok ? "✅" : "❌"} ${esc(q.p)}</b>${play.hints[i] ? ' <span class="badge">usou dica</span>' : ""}
-        ${ok ? "" : `<div class="small" style="color:var(--bad)">Sua resposta: ${esc(q.op[play.answers[i]] ?? "—")}</div>`}
-        <div class="small" style="color:var(--good)">Correta: ${esc(q.op[q.c])}</div>
-        <div class="small muted">${esc(q.exp)}</div></div>`;
-    }).join("");
-
-    let next = "";
-    if (mode === "plantao") {
-      const plan = todayPlan();
-      const n = plan.ids.find((id) => !plan.results[id]);
-      next = n ? `<a class="btn" href="#/caso/plantao/${n}">Próximo caso →</a>` : `<a class="btn" href="#/inicio">🏁 Plantão concluído!</a>`;
-    } else {
-      next = `<button class="btn" id="btnAnother">🎲 Outro caso</button>`;
-    }
-
-    return `
-      <div class="card" style="margin-top:16px">
-        <div class="result-hero">
-          <div class="muted">${play.review ? "Caso já atendido hoje" : "Caso concluído"}</div>
-          <div class="big">+${r.pts + (r.bonus || 0)} pts</div>
-          <div>${r.correct} de ${r.total} acertos${r.perfect ? " · 💯 caso perfeito" : ""}${r.bonus ? ` · 🌙 bônus de plantão +${r.bonus}` : ""}</div>
-        </div>
-        <h3>Revisão</h3>
-        ${review}
-        <div class="row" style="margin-top:16px">${next}<a class="btn ghost" href="#/${mode === "plantao" ? "plantao" : "treino"}">Voltar</a></div>
-      </div>`;
-  }
-
-  function bindCaso() {
-    document.querySelectorAll(".option").forEach((b) => b.addEventListener("click", () => {
-      if (play.answered) return;
-      play.answers[play.step] = Number(b.dataset.i);
-      play.answered = true;
-      render(false);
-    }));
-    const hint = $("#btnHint");
-    if (hint) hint.addEventListener("click", () => {
-      const q = play.c.perguntas[play.step];
-      const wrong = q.op.map((_, i) => i).filter((i) => i !== q.c);
-      play.removed[play.step] = shuffled(wrong, Math.random).slice(0, 2);
-      play.hints[play.step] = true;
-      render(false);
-    });
-    const next = $("#btnNext");
-    if (next) next.addEventListener("click", () => {
-      play.answered = false;
-      if (play.step + 1 < play.c.perguntas.length) { play.step++; }
-      else {
-        const hints = play.c.perguntas.map((_, i) => !!play.hints[i]);
-        play.hints = hints;
-        play.result = commitResult(play.c, play.mode, play.answers, hints);
-        play.finished = true;
-      }
-      render(false);
-      $("#view > .card:last-child")?.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
-    const another = $("#btnAnother");
-    if (another) another.addEventListener("click", () => {
-      const pool = CASES.filter((x) => x.id !== play.c.id && (trainFilter === "Todas" || x.esp === trainFilter));
-      const list = pool.length ? pool : CASES;
-      const c = list[Math.floor(Math.random() * list.length)];
-      play = null;
-      location.hash = `#/caso/treino/${c.id}`;
-    });
-  }
-
-  // ---------- Roteador ----------
-  function render(scrollTop = true) {
-    const parts = location.hash.replace(/^#\/?/, "").split("/");
-    let route = parts[0] || "inicio";
-    if (!TITLES[route]) route = "inicio";
-
-    if (route === "caso") startCase(parts[1], parts[2]);
-    else play = null;
-    if (route === "caso" && !play) return;
-
-    $("#pageTitle").textContent = TITLES[route];
-    document.querySelectorAll("#nav a").forEach((a) => {
-      const r = a.dataset.route;
-      a.classList.toggle("active", r === route || (route === "caso" && play && r === play.mode));
-    });
-
-    const views = { inicio: viewInicio, plantao: viewPlantao, treino: viewTreino, desempenho: viewDesempenho, conquistas: viewConquistas, ajustes: viewAjustes, caso: viewCaso };
-    $("#view").innerHTML = views[route]();
-    if (route === "treino") bindTreino();
-    if (route === "ajustes") bindAjustes();
-    if (route === "caso") bindCaso();
-    renderChips();
-    if (scrollTop) window.scrollTo(0, 0);
-  }
-
-  window.addEventListener("hashchange", () => render());
-  // vira o dia com o app aberto
-  document.addEventListener("visibilitychange", () => { if (!document.hidden && !play) render(false); });
+let state = load();
+function load() {
+  try {
+    const s = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    if (s && s.challenges) return { ...defaultState(), ...s, undo: s.undo || [] };
+  } catch {}
+  return defaultState();
+}
+function save() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch {}
+}
+function snapshot() {
+  const { undo, ...rest } = state;
+  state.undo.push(JSON.stringify(rest));
+  if (state.undo.length > 60) state.undo.shift();
+}
+function undo() {
+  const prev = state.undo.pop();
+  if (!prev) return;
+  const stack = state.undo;
+  state = { ...JSON.parse(prev), undo: stack };
+  save();
   render();
+}
 
-  if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const fmtDate = (d) => d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+const weekday = (d) => d.toLocaleDateString("pt-BR", { weekday: "short" }).replace(".", "");
+
+const current = () => state.challenges.find((c) => c.id === state.active) || state.challenges[0];
+
+// Dia de hoje dentro do desafio (0 = ainda não começou)
+function currentDay(c) {
+  const diff = Math.round((parseISO(todayISO()) - parseISO(c.start)) / 86400000);
+  return Math.max(0, Math.min(c.days, diff + 1));
+}
+function dayData(p, n) {
+  return p.days[n] || (p.days[n] = { errors: [], extras: [] });
+}
+function dayPoints(c, p, n) {
+  const d = p.days[n] || { errors: [], extras: [] };
+  const extra = d.extras.reduce((s, e) => s + e.pts, 0);
+  return { base: c.base, minus: d.errors.length, extra, total: c.base - d.errors.length + extra };
+}
+function stats(c, p) {
+  const today = currentDay(c);
+  let total = 0, minus = 0, extra = 0, perfect = 0;
+  for (let n = 1; n <= today; n++) {
+    const dp = dayPoints(c, p, n);
+    total += dp.total; minus += dp.minus; extra += dp.extra;
+    if (dp.minus === 0) perfect++;
   }
-})();
+  const remaining = c.days - today;
+  const maxPossible = total + remaining * c.base; // se fizer tudo certo daqui pra frente (sem extras)
+  const missing = Math.max(0, c.goal - total);
+  const canLose = maxPossible - c.goal; // quantos pontos ainda pode perder e bater a meta
+  const done = today >= c.days;
+  let status;
+  if (total >= c.goal) status = done ? "won" : "reached";
+  else if (done) status = "lost";
+  else if (canLose < 0) status = "danger"; // só com extras
+  else status = "ok";
+  return { today, total, minus, extra, perfect, remaining, maxPossible, missing, canLose, status };
+}
+
+// ---------- Ações ----------
+function addError(pid, n, note) {
+  const p = current().people.find((x) => x.id === pid);
+  snapshot();
+  dayData(p, n).errors.push({ note: note || "", t: Date.now() });
+  save(); render(); buzz();
+}
+function addExtra(pid, n, pts, note) {
+  const p = current().people.find((x) => x.id === pid);
+  snapshot();
+  dayData(p, n).extras.push({ pts, note: note || "", t: Date.now() });
+  save(); render(); buzz();
+}
+function removeItem(pid, n, kind, idx) {
+  const p = current().people.find((x) => x.id === pid);
+  snapshot();
+  dayData(p, n)[kind].splice(idx, 1);
+  save(); render();
+}
+function buzz() { try { navigator.vibrate && navigator.vibrate(15); } catch {} }
+
+// ---------- Render ----------
+function render() {
+  const c = current();
+  $("#btnUndo").disabled = !state.undo.length;
+
+  $("#tabs").innerHTML = state.challenges
+    .map((x) => `<button class="tab ${x.id === c.id ? "on" : ""}" data-tab="${x.id}">${esc(x.title)} <small>${x.days} dias</small></button>`)
+    .join("");
+
+  const today = currentDay(c);
+  const end = addDays(c.start, c.days - 1);
+  $("#summary").innerHTML = `
+    <div><span class="muted">Dia</span> <strong>${today}</strong><span class="muted">/${c.days}</span></div>
+    <div><span class="muted">Meta</span> <strong>${c.goal}</strong> <span class="muted">pts</span></div>
+    <div><span class="muted">${fmtDate(parseISO(c.start))} → ${fmtDate(end)}</span></div>
+    ${c.prize ? `<div>🎁 <strong>${esc(c.prize)}</strong></div>` : ""}
+    ${today === 0 ? `<div class="warn">O desafio começa em ${fmtDate(parseISO(c.start))}</div>` : ""}`;
+
+  const all = c.people.map((p) => ({ p, s: stats(c, p) }));
+  const ranked = [...all].sort((a, b) => b.s.total - a.s.total);
+  const showRank = c.people.length > 1;
+
+  $("#board").innerHTML = all.length
+    ? all.map(({ p, s }) => card(c, p, s, showRank ? 1 + ranked.filter((r) => r.s.total > s.total).length : 0, ranked)).join("")
+    : `<div class="empty">Nenhum participante. Toque em ⚙️ para adicionar.</div>`;
+  $("#board").classList.toggle("single", all.length === 1);
+}
+
+function statusLine(c, s) {
+  switch (s.status) {
+    case "won": return `<div class="status good">🏆 Desafio concluído! Ganhou o prêmio!</div>`;
+    case "reached": return `<div class="status good">🎉 Já bateu a meta! Continue assim até o fim.</div>`;
+    case "lost": return `<div class="status bad">Desafio terminou — faltaram ${s.missing} pontos.</div>`;
+    case "danger": return `<div class="status bad">⚠️ Só dá pra chegar na meta com atividades extras: faltam ${s.missing} pts e restam ${s.remaining} dias (${s.remaining * c.base} pts).</div>`;
+    default: return `<div class="status">Faltam <strong>${s.missing}</strong> pts · ainda pode perder até <strong>${s.canLose}</strong> pts e ganhar o prêmio</div>`;
+  }
+}
+
+function card(c, p, s, pos, ranked) {
+  const sel = Math.min(Math.max(1, state.ui[p.id] || s.today || 1), c.days);
+  const pct = Math.min(100, Math.max(0, (s.total / c.goal) * 100));
+  const medal = pos ? ["🥇", "🥈", "🥉"][pos - 1] || `${pos}º` : "";
+  const leader = pos === 1 && ranked.length > 1 && ranked[0].s.total > ranked[1].s.total;
+
+  const chips = Array.from({ length: c.days }, (_, i) => {
+    const n = i + 1;
+    let cls = "future";
+    if (n <= s.today) {
+      const dp = dayPoints(c, p, n);
+      cls = dp.minus === 0 ? "perfect" : dp.total >= c.base - 2 ? "meh" : "badday";
+      if (dp.extra > 0) cls += " star";
+    }
+    return `<button class="chip ${cls} ${n === sel ? "sel" : ""} ${n === s.today ? "today" : ""}" data-day="${n}" title="Dia ${n} — ${fmtDate(addDays(c.start, n - 1))}">${n}</button>`;
+  }).join("");
+
+  const isFuture = sel > s.today;
+  const d = p.days[sel] || { errors: [], extras: [] };
+  const dp = dayPoints(c, p, sel);
+  const date = addDays(c.start, sel - 1);
+
+  const items = [
+    ...d.errors.map((e, i) => `<li class="neg"><span>−1 ${esc(e.note || "Coisa errada")}</span><button class="x" data-rm="errors:${i}" title="Remover">✕</button></li>`),
+    ...d.extras.map((e, i) => `<li class="pos"><span>+${e.pts} ${esc(e.note || "Atividade extra")}</span><button class="x" data-rm="extras:${i}" title="Remover">✕</button></li>`),
+  ].join("");
+
+  return `
+  <article class="card ${leader ? "leader" : ""}" style="--c:${p.color}" data-pid="${p.id}">
+    <div class="card-head">
+      <span class="name">${leader ? "👑 " : ""}${esc(p.name)}</span>
+      ${medal ? `<span class="medal">${medal}</span>` : ""}
+    </div>
+
+    <div class="score-row">
+      <div class="score">${s.total}<span>/${c.goal}</span></div>
+      <div class="mini">
+        <div>✅ ${s.perfect} ${s.perfect === 1 ? "dia perfeito" : "dias perfeitos"}</div>
+        <div>❌ −${s.minus} ${s.minus === 1 ? "erro" : "erros"}</div>
+        <div>⭐ +${s.extra} extras</div>
+      </div>
+    </div>
+    <div class="progress"><div style="width:${pct}%"></div></div>
+    ${statusLine(c, s)}
+
+    <div class="chips">${chips}</div>
+
+    <div class="day ${isFuture ? "locked" : ""}">
+      <div class="day-head">
+        <strong>Dia ${sel}</strong> <span class="muted">${weekday(date)}, ${fmtDate(date)}</span>
+        <span class="day-total ${dp.total < c.base ? "low" : ""}">${isFuture ? "—" : `${dp.total} pts`}</span>
+      </div>
+      ${isFuture ? `<p class="muted">Esse dia ainda não chegou.</p>` : `
+      <p class="muted small">Começa com ${c.base} pontos se fizer tudo o que foi combinado.</p>
+      <input class="note" type="text" maxlength="40" placeholder="O que aconteceu? (opcional)" />
+      <div class="actions">
+        <button class="minus" data-err>−1 Coisa errada</button>
+        <button class="plus" data-extra="1">+1 Extra</button>
+        <button class="plus" data-extra="2">+2</button>
+        <button class="plus" data-extra="5">+5</button>
+      </div>
+      ${items ? `<ul class="items">${items}</ul>` : `<p class="muted small">Nada registrado neste dia — ${c.base} pontos garantidos. 👏</p>`}`}
+    </div>
+  </article>`;
+}
+
+// ---------- Eventos ----------
+$("#tabs").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-tab]");
+  if (!b) return;
+  state.active = b.dataset.tab;
+  save(); render();
+});
+
+$("#board").addEventListener("click", (e) => {
+  const cardEl = e.target.closest(".card");
+  if (!cardEl) return;
+  const pid = cardEl.dataset.pid;
+  const c = current();
+  const s = stats(c, c.people.find((x) => x.id === pid));
+  const sel = Math.min(Math.max(1, state.ui[pid] || s.today || 1), c.days);
+  const note = () => (cardEl.querySelector(".note")?.value || "").trim();
+
+  const chip = e.target.closest("[data-day]");
+  if (chip) { state.ui[pid] = Number(chip.dataset.day); save(); render(); return; }
+  if (e.target.closest("[data-err]")) return addError(pid, sel, note());
+  const ex = e.target.closest("[data-extra]");
+  if (ex) return addExtra(pid, sel, Number(ex.dataset.extra), note());
+  const rm = e.target.closest("[data-rm]");
+  if (rm) {
+    const [kind, idx] = rm.dataset.rm.split(":");
+    return removeItem(pid, sel, kind, Number(idx));
+  }
+});
+
+$("#btnUndo").addEventListener("click", undo);
+document.addEventListener("keydown", (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z" && !/input|textarea/i.test(e.target.tagName)) {
+    e.preventDefault(); undo();
+  }
+});
+
+// Configurações
+$("#btnSettings").addEventListener("click", () => {
+  const c = current();
+  $("#cfgTitle").value = c.title;
+  $("#cfgDays").value = c.days;
+  $("#cfgBase").value = c.base;
+  $("#cfgGoal").value = c.goal;
+  $("#cfgStart").value = c.start;
+  $("#cfgPrize").value = c.prize || "";
+  $("#cfgPeople").value = c.people.map((p) => p.name).join("\n");
+  $("#settings").showModal();
+});
+$("#settings").addEventListener("close", () => {
+  if ($("#settings").returnValue !== "ok") return;
+  const c = current();
+  const names = $("#cfgPeople").value.split("\n").map((s) => s.trim()).filter(Boolean).slice(0, 8);
+  const removed = c.people.length > names.length ? c.people.slice(names.length) : [];
+  const apply = () => {
+    snapshot();
+    c.title = $("#cfgTitle").value.trim() || c.title;
+    c.days = Math.max(1, parseInt($("#cfgDays").value, 10) || c.days);
+    c.base = Math.max(1, parseInt($("#cfgBase").value, 10) || c.base);
+    c.goal = Math.max(1, parseInt($("#cfgGoal").value, 10) || c.goal);
+    c.start = $("#cfgStart").value || c.start;
+    c.prize = $("#cfgPrize").value.trim();
+    c.people = names.map((n, i) => (c.people[i] ? { ...c.people[i], name: n } : person(n, i)));
+    save(); render();
+  };
+  if (removed.some((p) => Object.keys(p.days).length)) {
+    askConfirm(`Remover ${removed.map((p) => p.name).join(", ")} e apagar os pontos registrados?`, apply);
+  } else apply();
+});
+
+function askConfirm(text, onOk) {
+  $("#confirmText").textContent = text;
+  const dlg = $("#confirm");
+  dlg.onclose = () => { if (dlg.returnValue === "ok") onOk(); };
+  dlg.showModal();
+}
+
+// Atualiza o "dia de hoje" quando vira a meia-noite
+let lastDay = todayISO();
+setInterval(() => { if (todayISO() !== lastDay) { lastDay = todayISO(); render(); } }, 60000);
+
+// PWA offline (ignorado onde não é permitido)
+try {
+  if ("serviceWorker" in navigator && location.protocol === "https:" && !location.hostname.endsWith("claude.ai")) {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  }
+} catch {}
+
+render();
