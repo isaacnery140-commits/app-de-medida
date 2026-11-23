@@ -300,9 +300,9 @@
 
     return `
       ${installCard()}
-      <a class="card spin-banner" href="#/sorteio">
+      <a class="card spin-banner" href="#/sorteio/girar">
         <span class="spin-emoji">🎰</span>
-        <div><b>Sortear um caso</b><div class="small">Gire a roleta e ganhe até ×3 de pontos</div></div>
+        <div><b>Sortear um caso</b><div class="small">Toque para girar a roleta e ganhar até ×3 de pontos</div></div>
         <span class="spacer"></span><span class="go">›</span>
       </a>
       <div class="grid kpis">
@@ -785,7 +785,16 @@
     $("#view").innerHTML = views[route]();
     if (route === "treino") bindTreino();
     if (route === "ajustes") bindAjustes();
-    if (route === "sorteio") bindSorteio();
+    if (route === "sorteio") {
+      bindSorteio();
+      // veio do botão "Sortear": já gira a roleta
+      if (parts[1] === "girar") {
+        history.replaceState(null, "", "#/sorteio");
+        lastHash = location.hash;
+        const btn = $("#btnSpin");
+        if (btn && !btn.disabled) setTimeout(() => btn.click(), 350);
+      }
+    }
     if (route === "inicio") bindInstall();
     if (route === "caso") bindCaso();
     renderChips();
