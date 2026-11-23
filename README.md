@@ -11,7 +11,8 @@ Funciona no **PC**, **Android** e **iPhone** como app instalável (PWA), inclusi
 | Tela | O que tem |
 |---|---|
 | **Início** | Pontos, nível, sequência, % de acertos, plantão de hoje, gráfico dos últimos 14 dias e especialidades para revisar |
-| **Plantão do dia** | Casos sorteados para o dia (3, 5, 8 ou 10 — escolha em Ajustes). Muda todo dia |
+| **Plantão do dia** | Casos do dia (3, 5, 8 ou 10 — escolha em Ajustes), escondidos como "caso surpresa" até você girar a roleta. Muda todo dia |
+| **🎰 Sortear** | Roleta de especialidades. No modo *Plantão* revela o próximo caso do dia; no modo *Livre* sorteia qualquer caso com um bônus de sorte ×1, ×2 ou ×3 |
 | **Treino livre** | Qualquer caso, filtrando por especialidade, ou caso aleatório |
 | **Desempenho** | Acertos por especialidade |
 | **Conquistas** | 10 medalhas para desbloquear |
@@ -24,7 +25,13 @@ Funciona no **PC**, **Android** e **iPhone** como app instalável (PWA), inclusi
 - **Caso perfeito** (tudo certo sem dica): bônus de 5 × dificuldade.
 - **Plantão completo**: +20 pontos, mais +2 por dia de sequência (até +14).
 - **Treino livre** vale metade dos pontos.
+- **Sorteio livre**: pontos de treino × sorte (×1 em 60%, ×2 em 30%, ×3 em 10% dos giros). O caso sorteado precisa ser atendido antes de girar de novo.
 - Níveis: Estudante → Interno → Residente R1/R2/R3 → Especialista → Preceptor → Chefe de Plantão → Lenda da Medicina.
+
+## No celular
+
+O menu fica embaixo, com o botão 🎰 **Sortear** no meio. Na tela inicial aparece o aviso **Instalar no celular**
+(no Android abre a instalação direto; no iPhone mostra o passo a passo do Safari). Depois de instalado, o app abre em tela cheia e funciona sem internet.
 
 ## Como adicionar casos
 
