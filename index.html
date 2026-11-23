@@ -3,78 +3,61 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Desafio de Pontos</title>
-  <meta name="theme-color" content="#12121a" />
+  <title>Plantão Quiz — Casos Clínicos</title>
+  <meta name="description" content="Jogo de casos clínicos: resolva casos médicos todo dia e ganhe pontos." />
+  <meta name="theme-color" content="#0f766e" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="Desafio" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Plantão" />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="icons/icon-180.png" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <header class="topbar">
-    <h1>🏆 Desafio de Pontos</h1>
-    <div class="top-actions">
-      <button id="btnUndo" class="ghost" title="Desfazer (Ctrl+Z)">↶ Desfazer</button>
-      <button id="btnSettings" class="ghost" title="Configurar desafio">⚙️</button>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="brand">
+        <img src="icons/icon.svg" alt="" width="36" height="36" />
+        <div>
+          <strong>Plantão Quiz</strong>
+          <small>Casos clínicos</small>
+        </div>
+      </div>
+      <nav id="nav" class="nav">
+        <a href="#/inicio" data-route="inicio"><span>🏠</span>Início</a>
+        <a href="#/plantao" data-route="plantao"><span>🩺</span>Plantão do dia</a>
+        <a href="#/treino" data-route="treino"><span>🎯</span>Treino livre</a>
+        <a href="#/desempenho" data-route="desempenho"><span>📊</span>Desempenho</a>
+        <a href="#/conquistas" data-route="conquistas"><span>🏅</span>Conquistas</a>
+        <a href="#/ajustes" data-route="ajustes"><span>⚙️</span>Ajustes</a>
+      </nav>
+      <p class="disclaimer">Conteúdo educativo. Não substitui avaliação médica.</p>
+    </aside>
+
+    <div class="main">
+      <header class="topbar">
+        <h1 id="pageTitle">Início</h1>
+        <div id="chips" class="chips"></div>
+      </header>
+      <main id="view" class="view"></main>
     </div>
-  </header>
+  </div>
 
-  <nav id="tabs" class="tabs"></nav>
+  <div id="toasts" class="toasts" aria-live="polite"></div>
 
-  <section id="summary" class="summary"></section>
-
-  <main id="board" class="board"></main>
-
-  <!-- Configurações do desafio -->
-  <dialog id="settings">
-    <form method="dialog" class="sheet" id="settingsForm">
-      <h2>Configurar desafio</h2>
-      <label>Nome da tela
-        <input id="cfgTitle" type="text" maxlength="30" />
-      </label>
-      <div class="grid2">
-        <label>Dias do desafio
-          <input id="cfgDays" type="number" min="1" max="365" />
-        </label>
-        <label>Pontos por dia
-          <input id="cfgBase" type="number" min="1" max="100" />
-        </label>
-        <label>Meta para o prêmio
-          <input id="cfgGoal" type="number" min="1" />
-        </label>
-        <label>Início
-          <input id="cfgStart" type="date" />
-        </label>
-      </div>
-      <label>Prêmio (opcional)
-        <input id="cfgPrize" type="text" maxlength="60" placeholder="Ex.: passeio no parque" />
-      </label>
-      <label>Participantes (um por linha)
-        <textarea id="cfgPeople" rows="3"></textarea>
-      </label>
-      <p class="hint">Mudar um nome mantém os pontos. Apagar uma linha remove o participante e os pontos dele.</p>
-      <div class="sheet-actions">
-        <button value="cancel" class="ghost" formnovalidate>Cancelar</button>
-        <button value="ok">Salvar</button>
-      </div>
-    </form>
-  </dialog>
-
-  <!-- Confirmação genérica -->
   <dialog id="confirm">
-    <form method="dialog" class="sheet small">
+    <form method="dialog" class="sheet">
       <p id="confirmText"></p>
       <div class="sheet-actions">
-        <button value="cancel" class="ghost">Cancelar</button>
-        <button value="ok" class="danger">Confirmar</button>
+        <button value="cancel" class="btn ghost">Cancelar</button>
+        <button value="ok" class="btn danger">Confirmar</button>
       </div>
     </form>
   </dialog>
 
+  <script src="cases.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
