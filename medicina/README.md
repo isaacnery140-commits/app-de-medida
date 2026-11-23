@@ -39,7 +39,8 @@ O menu fica embaixo, com o botão 🎰 **Sortear** no meio. Na tela inicial apar
 
 ## Como adicionar casos
 
-Edite `cases.js` e copie um caso existente. Campos: `esp` (especialidade), `dif` (1, 2 ou 3),
+Os casos ficam em `cases.js` (casos originais), `cases-clinica.js` (clínica médica), `cases-cirurgia-go-ped.js` (cirurgia, emergência, toxicologia, pediatria, obstetrícia e ginecologia) e `cases-temas-novos.js` (psiquiatria, dermatologia, ortopedia, urologia, oftalmologia, otorrino e geriatria). São 125 casos em 22 temas. Para adicionar, copie um caso existente.
+As alternativas são embaralhadas automaticamente pelo app, então pode deixar a correta em qualquer posição. Campos: `esp` (especialidade), `dif` (1, 2 ou 3),
 `titulo`, `paciente`, `historia`, `sinais`, `exames` e `perguntas` (cada uma com `p`, `op`, `c` = índice da correta, `exp` = explicação).
 
 ## Como rodar no PC

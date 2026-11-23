@@ -8,6 +8,13 @@
   const DIF_PTS = { 1: 10, 2: 15, 3: 20 };
   const LEVELS = ["Estudante", "Interno", "Residente R1", "Residente R2", "Residente R3",
     "Especialista", "Preceptor", "Chefe de Plantão", "Lenda da Medicina"];
+  // Embaralha as alternativas de cada pergunta (sempre na mesma ordem para o mesmo caso),
+  // para a resposta certa não ficar sempre na mesma letra.
+  CASES.forEach((cs) => cs.perguntas.forEach((q, qi) => {
+    const order = shuffled(q.op.map((_, i) => i), rng(hash(`${cs.id}#${qi}`)));
+    q.op = order.map((i) => q.op[i]);
+    q.c = order.indexOf(q.c);
+  }));
   const SPECIALTIES = [...new Set(CASES.map((c) => c.esp))].sort((a, b) => a.localeCompare(b));
   const CASE_BY_ID = Object.fromEntries(CASES.map((c) => [c.id, c]));
 
@@ -356,7 +363,7 @@
       <div class="card">
         <div class="row" style="margin-bottom:12px"><h2 style="margin:0">Escolha uma especialidade</h2><span class="spacer"></span>
           <button class="btn" id="btnRandom">🎲 Caso aleatório</button></div>
-        <div class="filters">${["Todas", ...SPECIALTIES].map((e) => `<button class="filter ${e === trainFilter ? "active" : ""}" data-esp="${esc(e)}">${esc(e)}</button>`).join("")}</div>
+        <div class="filters">${["Todas", ...SPECIALTIES].map((e) => `<button class="filter ${e === trainFilter ? "active" : ""}" data-esp="${esc(e)}">${esc(e)} <span class="cnt">${e === "Todas" ? CASES.length : CASES.filter((c) => c.esp === e).length}</span></button>`).join("")}</div>
         <div class="case-list">${list.map((c, i) => caseItem(c, i, null, `#/caso/treino/${c.id}`)).join("")}</div>
       </div>`;
   }
@@ -612,7 +619,7 @@
 
   // ---------- Roleta de sorteio ----------
   const WHEEL_COLORS = ["#0f766e", "#14b8a6", "#0ea5e9", "#6366f1", "#f59e0b", "#ef4444", "#10b981"];
-  const ESP_ICON = { Cardiologia: "❤️", Cirurgia: "🔪", Emergência: "🚑", Endocrinologia: "🧪", Gastroenterologia: "🫃", Hematologia: "🩸", Infectologia: "🦠", Nefrologia: "💧", Neurologia: "🧠", Obstetrícia: "🤰", Pediatria: "👶", Pneumologia: "🫁", Reumatologia: "🦴", Toxicologia: "☠️" };
+  const ESP_ICON = { Cardiologia: "❤️", Cirurgia: "🔪", Emergência: "🚑", Endocrinologia: "🧪", Gastroenterologia: "🫃", Hematologia: "🩸", Infectologia: "🦠", Nefrologia: "💧", Neurologia: "🧠", Obstetrícia: "🤰", Pediatria: "👶", Pneumologia: "🫁", Reumatologia: "🤲", Toxicologia: "☠️", Psiquiatria: "🧩", Dermatologia: "🧴", Ortopedia: "🦴", Urologia: "🚹", Oftalmologia: "👁️", Otorrino: "👂", Ginecologia: "🌸", Geriatria: "👴" };
   let wheelRot = 0;
   let spinning = false;
   let sorteioMode = "livre";

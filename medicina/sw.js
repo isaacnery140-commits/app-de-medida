@@ -1,11 +1,14 @@
 // Service worker: deixa o app funcionando offline
-const CACHE = "medicina-v5";
+const CACHE = "medicina-v6";
 const FILES = [
   "./",
   "index.html",
   "style.css",
   "app.js",
   "cases.js",
+  "cases-clinica.js",
+  "cases-cirurgia-go-ped.js",
+  "cases-temas-novos.js",
   "manifest.webmanifest",
   "icons/icon.svg",
   "icons/icon-180.png",
