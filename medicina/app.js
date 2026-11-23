@@ -3,6 +3,7 @@
   "use strict";
 
   const STORE_KEY = "plantao-quiz-v1";
+  const META = 1000; // ao bater 1000 pontos, zera automaticamente
   const DIF_NAME = { 1: "Fácil", 2: "Médio", 3: "Difícil" };
   const DIF_PTS = { 1: 10, 2: 15, 3: 20 };
   const LEVELS = ["Estudante", "Interno", "Residente R1", "Residente R2", "Residente R3",
@@ -17,7 +18,7 @@
     { id: "streak3", ico: "🔥", nome: "Ritmo de residente", desc: "3 dias seguidos de plantão completo" },
     { id: "streak7", ico: "⚡", nome: "Semana de ferro", desc: "7 dias seguidos de plantão completo" },
     { id: "pts500", ico: "⭐", nome: "500 pontos", desc: "Somar 500 pontos" },
-    { id: "pts2000", ico: "🌟", nome: "2.000 pontos", desc: "Somar 2.000 pontos" },
+    { id: "meta1000", ico: "🏆", nome: "Meta de 1.000", desc: "Bater 1.000 pontos (os pontos zeram e começa outra rodada)" },
     { id: "resp50", ico: "📚", nome: "50 respostas", desc: "Responder 50 perguntas" },
     { id: "dificil", ico: "🧠", nome: "Caso difícil", desc: "Acertar tudo num caso difícil" },
     { id: "todas", ico: "🌍", nome: "Clínico geral", desc: "Acertar ao menos uma pergunta em cada especialidade" },
@@ -35,6 +36,7 @@
     daily: {},         // { "2026-11-23": { ids: [], results: { id: result } } }
     streak: 0,
     bestStreak: 0,
+    rounds: 0,         // quantas vezes bateu 1000 pontos
     lastFullDay: null,
     badges: {},        // { id: dateISO }
     luck: null,        // { id, mult } caso sorteado aguardando atendimento
@@ -194,6 +196,14 @@
 
     const total = r.pts + bonus;
     state.points += total;
+    let hitMeta = false;
+    if (state.points >= META) {
+      state.rounds = (state.rounds || 0) + 1;
+      state.points = 0;
+      hitMeta = true;
+      unlock("meta1000");
+      toast(`🏆 Você bateu ${fmt(META)} pontos! Os pontos foram zerados — rodada ${state.rounds + 1} começando.`);
+    }
     const d = (state.days[key] ||= { points: 0, correct: 0, total: 0 });
     d.points += total; d.correct += r.correct; d.total += r.total;
 
@@ -201,12 +211,11 @@
     if (r.perfect) unlock("perfeito");
     if (r.correct === r.total && c.dif === 3) unlock("dificil");
     if (state.points >= 500) unlock("pts500");
-    if (state.points >= 2000) unlock("pts2000");
     if (state.answered >= 50) unlock("resp50");
     if (SPECIALTIES.every((e) => state.spec[e] && state.spec[e].c > 0)) unlock("todas");
 
     const after = levelInfo(state.points);
-    if (after.index > beforeLvl) toast(`🎉 Subiu de nível: ${after.name}!`);
+    if (!hitMeta && after.index > beforeLvl) toast(`🎉 Subiu de nível: ${after.name}!`);
     save();
     return { ...r, bonus };
   }
@@ -219,7 +228,7 @@
     $("#chips").innerHTML = `
       <span class="chip hide-sm">🩺 ${done}/${plan.ids.length} hoje</span>
       <span class="chip">🔥 ${currentStreak()}</span>
-      <span class="chip primary">⭐ ${fmt(state.points)} pts</span>
+      <span class="chip primary">⭐ ${fmt(state.points)}/${fmt(META)}</span>${state.rounds ? `<span class="chip hide-sm">🏆 ${state.rounds}</span>` : ""}
       <span class="chip hide-sm">🎓 ${esc(lv.name)}</span>`;
   }
   function currentStreak() {
@@ -294,7 +303,7 @@
         <span class="spacer"></span><span class="go">›</span>
       </a>
       <div class="grid kpis">
-        <div class="card kpi"><div class="label">Pontos totais <span>⭐</span></div><div class="value">${fmt(state.points)}</div><div class="sub">+${fmt(todayPts)} hoje</div></div>
+        <div class="card kpi"><div class="label">Pontos <span>⭐</span></div><div class="value">${fmt(state.points)}<span class="muted" style="font-size:14px;font-weight:600"> / ${fmt(META)}</span></div><div class="progress" style="margin:6px 0"><i style="width:${pct(state.points, META)}%"></i></div><div class="sub">Faltam ${fmt(META - state.points)} · +${fmt(todayPts)} hoje${state.rounds ? ` · 🏆 ${state.rounds}× meta` : ""}</div></div>
         <div class="card kpi"><div class="label">Nível <span>🎓</span></div><div class="value" style="font-size:19px;margin:8px 0 6px">${esc(lv.name)}</div><div class="progress"><i style="width:${lv.pct}%"></i></div><div class="sub">${lv.into}/${lv.need} para o próximo</div></div>
         <div class="card kpi"><div class="label">Sequência <span>🔥</span></div><div class="value">${currentStreak()} ${currentStreak() === 1 ? "dia" : "dias"}</div><div class="sub">Recorde: ${state.bestStreak}</div></div>
         <div class="card kpi"><div class="label">Acertos <span>🎯</span></div><div class="value">${pct(state.correct, state.answered)}%</div><div class="sub">${fmt(state.correct)} de ${fmt(state.answered)} perguntas</div></div>
@@ -405,11 +414,12 @@
       </div>
       <div class="card" style="max-width:520px;margin-top:16px${window.EMBED ? ";display:none" : ""}">
         <h2>Dados</h2>
-        <p class="muted small">Seu progresso fica salvo neste aparelho e navegador.</p>
+        <p class="muted small">Ao bater 1.000 pontos, eles zeram sozinhos e começa outra rodada. "Zerar pontos" zera só os pontos; "Zerar tudo" apaga também histórico e conquistas. O progresso fica salvo neste aparelho.</p>
         <div class="row">
           <button class="btn ghost" id="btnExport">⬇ Exportar backup</button>
           <label class="btn ghost" style="cursor:pointer">⬆ Importar backup<input id="fileImport" type="file" accept="application/json" hidden /></label>
-          <button class="btn danger" id="btnReset">Zerar progresso</button>
+          <button class="btn ghost" id="btnResetPts">↺ Zerar pontos</button>
+          <button class="btn danger" id="btnReset">Zerar tudo</button>
         </div>
       </div>
       <p class="muted small" style="margin-top:16px">${CASES.length} casos em ${SPECIALTIES.length} especialidades. Conteúdo educativo, não substitui avaliação médica.</p>`;
@@ -437,6 +447,10 @@
         if (!(await confirmBox("Substituir o progresso atual pelo backup?"))) return;
         state = { ...defaultState(), ...data }; save(); toast("✔ Backup importado"); render();
       } catch { toast("Arquivo de backup inválido"); }
+    });
+    $("#btnResetPts").addEventListener("click", async () => {
+      if (!(await confirmBox(`Zerar seus ${fmt(state.points)} pontos? Histórico, acertos e conquistas continuam.`))) return;
+      state.points = 0; save(); toast("↺ Pontos zerados"); render();
     });
     $("#btnReset").addEventListener("click", async () => {
       if (!(await confirmBox("Apagar todos os pontos, conquistas e histórico? Não dá para desfazer."))) return;

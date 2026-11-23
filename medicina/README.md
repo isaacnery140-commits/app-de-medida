@@ -29,6 +29,7 @@ Funciona no **PC**, **Android** e **iPhone** como app instalável (PWA), inclusi
 - **Plantão completo**: +20 pontos, mais +2 por dia de sequência (até +14).
 - **Treino livre** vale metade dos pontos.
 - **Sorteio livre**: pontos de treino × sorte (×1 em 60%, ×2 em 30%, ×3 em 10% dos giros). O caso sorteado precisa ser atendido antes de girar de novo.
+- **Meta de 1.000 pontos**: ao chegar em 1.000, os pontos zeram automaticamente e começa uma nova rodada (o app conta quantas vezes você bateu a meta). Em Ajustes dá para zerar os pontos a qualquer momento.
 - Níveis: Estudante → Interno → Residente R1/R2/R3 → Especialista → Preceptor → Chefe de Plantão → Lenda da Medicina.
 
 ## No celular
