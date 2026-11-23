@@ -240,7 +240,7 @@
   const TITLES = { inicio: "Início", plantao: "Plantão do dia", treino: "Treino livre", desempenho: "Desempenho", conquistas: "Conquistas", ajustes: "Ajustes", caso: "Caso clínico", sorteio: "Sortear caso" };
 
   function isRevealed(plan, id) {
-    return !!plan.results[id] || (plan.revealed || []).includes(id);
+    return true; // casos do plantão já vêm sorteados e visíveis
   }
   function planItem(plan, id, i) {
     if (isRevealed(plan, id)) return caseItem(CASE_BY_ID[id], i, plan.results[id], `#/caso/plantao/${id}`);
@@ -252,9 +252,8 @@
       </a>`;
   }
   function planNextAction(plan) {
-    const open = plan.ids.find((id) => !plan.results[id] && isRevealed(plan, id));
-    if (open) return `<a class="btn" href="#/caso/plantao/${open}">▶ Atender caso revelado</a>`;
-    if (plan.ids.some((id) => !plan.results[id])) return `<a class="btn" href="#/sorteio/plantao">🎰 Sortear próximo caso</a>`;
+    const open = plan.ids.find((id) => !plan.results[id]);
+    if (open) return `<a class="btn" href="#/caso/plantao/${open}">▶ Atender próximo caso</a>`;
     return `<span class="badge ok">✓ Plantão concluído! Volte amanhã para novos casos.</span>`;
   }
 
@@ -336,7 +335,7 @@
     return `
       <div class="card">
         <div class="row">
-          <div><h2 style="margin:0">Casos de hoje</h2><span class="muted small">Novos casos todos os dias, revelados pela roleta. Conclua todos para ganhar o bônus de plantão (+20 e mais pela sequência).</span></div>
+          <div><h2 style="margin:0">Casos de hoje</h2><span class="muted small">Novos casos sorteados todos os dias. Conclua todos para ganhar o bônus de plantão (+20 e mais pela sequência).</span></div>
           <span class="spacer"></span><span class="chip primary">+${pts} pts hoje</span>
         </div>
         <div class="progress" style="margin:14px 0"><i style="width:${pct(done.length, plan.ids.length)}%"></i></div>
@@ -542,7 +541,7 @@
     if (mode === "plantao") {
       const plan = todayPlan();
       const n = plan.ids.find((id) => !plan.results[id]);
-      next = n ? `<a class="btn" href="#/sorteio/plantao">🎰 Sortear próximo caso</a>` : `<a class="btn" href="#/inicio">🏁 Plantão concluído!</a>`;
+      next = n ? `<a class="btn" href="#/caso/plantao/${n}">Próximo caso →</a>` : `<a class="btn" href="#/inicio">🏁 Plantão concluído!</a>`;
     } else if (mode === "sorteio") {
       next = `<a class="btn" href="#/sorteio">🎰 Girar de novo</a>`;
     } else {
@@ -674,10 +673,6 @@
       : "Sorteio livre · a sorte multiplica seus pontos de treino (×1, ×2 ou ×3)";
     return `
       <div class="card wheel-card">
-        <div class="seg-tabs">
-          <a href="#/sorteio/plantao" class="${sorteioMode === "plantao" ? "active" : ""}">🩺 Plantão</a>
-          <a href="#/sorteio" class="${sorteioMode === "livre" ? "active" : ""}">🍀 Livre</a>
-        </div>
         <p class="muted small" style="text-align:center;margin:10px 0 4px">${subtitle}</p>
         <div class="wheel-wrap">
           <div class="pointer"></div>
@@ -773,7 +768,8 @@
       a.classList.toggle("active", (r === route && !plantaoSpin) || (plantaoSpin && r === "plantao") || (route === "caso" && play && r === play.mode));
     });
 
-    sorteioMode = route === "sorteio" && parts[1] === "plantao" ? "plantao" : "livre";
+    if (route === "sorteio" && parts[1] === "plantao") { location.replace("#/plantao"); return; }
+    sorteioMode = "livre";
     const views = { sorteio: viewSorteio, inicio: viewInicio, plantao: viewPlantao, treino: viewTreino, desempenho: viewDesempenho, conquistas: viewConquistas, ajustes: viewAjustes, caso: viewCaso };
     $("#view").innerHTML = views[route]();
     if (route === "treino") bindTreino();

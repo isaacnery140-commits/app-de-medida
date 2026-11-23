@@ -14,8 +14,8 @@ Funciona no **PC**, **Android** e **iPhone** como app instalável (PWA), inclusi
 | Tela | O que tem |
 |---|---|
 | **Início** | Pontos, nível, sequência, % de acertos, plantão de hoje, gráfico dos últimos 14 dias e especialidades para revisar |
-| **Plantão do dia** | Casos do dia (3, 5, 8 ou 10 — escolha em Ajustes), escondidos como "caso surpresa" até você girar a roleta. Muda todo dia |
-| **🎰 Sortear** | Roleta de especialidades. No modo *Plantão* revela o próximo caso do dia; no modo *Livre* sorteia qualquer caso com um bônus de sorte ×1, ×2 ou ×3 |
+| **Plantão do dia** | Casos do dia (3, 5, 8 ou 10 — escolha em Ajustes), já sorteados e visíveis assim que você abre. Muda todo dia |
+| **🎰 Sortear** | Roleta de especialidades: sorteia qualquer caso com um bônus de sorte ×1, ×2 ou ×3 |
 | **Treino livre** | Qualquer caso, filtrando por especialidade, ou caso aleatório |
 | **Desempenho** | Acertos por especialidade |
 | **Conquistas** | 10 medalhas para desbloquear |
