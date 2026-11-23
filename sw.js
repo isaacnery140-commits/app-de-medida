@@ -1,5 +1,5 @@
 // Service worker: deixa o app funcionando offline
-const CACHE = "desafio-v2";
+const CACHE = "desafio-v3";
 const FILES = [
   "./",
   "index.html",
