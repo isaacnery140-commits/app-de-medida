@@ -240,77 +240,11 @@ dialog::backdrop { background: rgba(15, 23, 42, .45); }
   .nav { flex-direction: row; justify-content: space-around; }
   .nav a { flex-direction: column; gap: 2px; font-size: 10.5px; padding: 6px 4px; flex: 1; text-align: center; }
   .nav a span { font-size: 18px; }
-  .nav a[data-route="conquistas"], .nav a[data-route="ajustes"] { display: none; }
+  .nav a[data-route="conquistas"] { display: none; }
   .topbar { padding: calc(12px + env(safe-area-inset-top)) 16px 12px; }
   .topbar h1 { font-size: 17px; }
   .chip.hide-sm { display: none; }
   .view { padding: 16px 14px 100px; }
   .kpi .value { font-size: 22px; }
   .toasts { left: 14px; right: 14px; bottom: 84px; }
-}
-
-/* ---------- Roleta ---------- */
-.wheel-card { max-width: 520px; margin: 0 auto; }
-.seg-tabs { display: flex; background: var(--panel-2); border-radius: 12px; padding: 4px; gap: 4px; }
-.seg-tabs a { flex: 1; text-align: center; padding: 9px; border-radius: 9px; text-decoration: none; font-weight: 600; color: var(--muted); }
-.seg-tabs a.active { background: var(--panel); color: var(--primary); box-shadow: var(--shadow); }
-.wheel-wrap { position: relative; width: min(84vw, 380px); aspect-ratio: 1; margin: 18px auto 10px; }
-.wheel-wrap svg { width: 100%; height: 100%; display: block; border-radius: 50%; box-shadow: 0 10px 30px rgba(15, 118, 110, .25); transition: transform 4.2s cubic-bezier(.12, .7, .08, 1); }
-.wheel-wrap .pointer {
-  position: absolute; top: -10px; left: 50%; transform: translateX(-50%); z-index: 2;
-  width: 0; height: 0; border-left: 16px solid transparent; border-right: 16px solid transparent; border-top: 30px solid #fbbf24;
-  filter: drop-shadow(0 2px 3px rgba(0,0,0,.3));
-}
-.spin-btn {
-  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-  width: 26%; aspect-ratio: 1; border-radius: 50%; border: 5px solid #fff;
-  background: radial-gradient(circle at 35% 30%, #fde68a, #f59e0b); color: #7c2d12;
-  font: inherit; font-weight: 800; font-size: clamp(12px, 3.6vw, 17px); letter-spacing: .04em; cursor: pointer;
-  box-shadow: 0 6px 16px rgba(0,0,0,.25);
-}
-.spin-btn:active:not(:disabled) { transform: translate(-50%, -50%) scale(.94); }
-.spin-btn:disabled { filter: grayscale(.5); opacity: .8; cursor: default; }
-.draw { text-align: center; padding: 16px; border-radius: 14px; background: var(--primary-soft); margin-top: 8px; }
-.draw.pop { animation: drawpop .45s cubic-bezier(.2, 1.6, .4, 1); }
-@keyframes drawpop { from { transform: scale(.7); opacity: 0; } }
-.draw-esp { font-size: 20px; font-weight: 800; color: var(--primary); margin: 4px 0 6px; }
-.draw .meta { display: flex; gap: 6px; }
-.luck { display: inline-block; margin-top: 4px; padding: 6px 14px; border-radius: 999px; font-weight: 800; background: #fff; }
-.luck.l2 { background: #fef3c7; color: #b45309; }
-.luck.l3 { background: linear-gradient(90deg, #fde68a, #f472b6); color: #831843; }
-
-.case-item.mystery { border-style: dashed; background: var(--panel-2); }
-.case-item.mystery .num { background: #fef3c7; color: #b45309; }
-
-.spin-banner {
-  display: flex; align-items: center; gap: 14px; margin-bottom: 16px; text-decoration: none;
-  background: linear-gradient(120deg, #0f766e, #14b8a6); color: #fff; border: 0;
-}
-.spin-banner .spin-emoji { font-size: 34px; }
-.spin-banner .go { font-size: 30px; font-weight: 300; }
-.install { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; border-color: var(--primary-2); }
-.install > div { flex: 1; }
-
-.gear { display: none; text-decoration: none; font-size: 20px; padding: 4px; }
-
-@media (max-width: 720px) {
-  .gear { display: block; }
-  .topbar { gap: 8px; }
-  .topbar h1 { flex: 1; }
-  .nav a.nav-spin { position: relative; color: #fff !important; background: none !important; }
-  .nav a.nav-spin span {
-    width: 54px; height: 54px; border-radius: 50%; margin-top: -26px;
-    display: grid; place-items: center; font-size: 26px;
-    background: linear-gradient(135deg, #14b8a6, #0f766e); border: 4px solid var(--panel);
-    box-shadow: 0 6px 16px rgba(15, 118, 110, .4);
-  }
-  .nav a.nav-spin { color: var(--primary) !important; font-weight: 700; }
-  .nav a.active.nav-spin span { background: linear-gradient(135deg, #f59e0b, #f97316); }
-  .option { padding: 14px 12px; min-height: 52px; }
-  .btn { min-height: 46px; }
-  .wheel-card { padding: 14px; }
-}
-@media (max-width: 720px) {
-  html { scroll-padding-bottom: 120px; scroll-padding-top: 80px; }
-  .view { padding-bottom: 120px; }
 }
