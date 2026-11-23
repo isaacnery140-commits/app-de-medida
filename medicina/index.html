@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Plantão Quiz — Casos Clínicos</title>
+  <meta name="description" content="Jogo de casos clínicos: resolva casos médicos todo dia e ganhe pontos." />
+  <meta name="theme-color" content="#0f766e" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Plantão" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="icons/icon-180.png" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="brand">
+        <img src="icons/icon.svg" alt="" width="36" height="36" />
+        <div>
+          <strong>Plantão Quiz</strong>
+          <small>Casos clínicos</small>
+        </div>
+      </div>
+      <nav id="nav" class="nav">
+        <a href="#/inicio" data-route="inicio"><span>🏠</span>Início</a>
+        <a href="#/plantao" data-route="plantao"><span>🩺</span>Plantão</a>
+        <a href="#/sorteio" data-route="sorteio" class="nav-spin"><span>🎰</span>Sortear</a>
+        <a href="#/treino" data-route="treino"><span>🎯</span>Treino</a>
+        <a href="#/desempenho" data-route="desempenho"><span>📊</span>Desempenho</a>
+        <a href="#/conquistas" data-route="conquistas"><span>🏅</span>Conquistas</a>
+        <a href="#/ajustes" data-route="ajustes"><span>⚙️</span>Ajustes</a>
+      </nav>
+      <p class="disclaimer">Conteúdo educativo. Não substitui avaliação médica.</p>
+    </aside>
+
+    <div class="main">
+      <header class="topbar">
+        <h1 id="pageTitle">Início</h1>
+        <div id="chips" class="chips"></div>
+        <a href="#/ajustes" class="gear" aria-label="Ajustes">⚙️</a>
+      </header>
+      <main id="view" class="view"></main>
+    </div>
+  </div>
+
+  <div id="toasts" class="toasts" aria-live="polite"></div>
+
+  <dialog id="confirm">
+    <form method="dialog" class="sheet">
+      <p id="confirmText"></p>
+      <div class="sheet-actions">
+        <button value="cancel" class="btn ghost">Cancelar</button>
+        <button value="ok" class="btn danger">Confirmar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="cases.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
